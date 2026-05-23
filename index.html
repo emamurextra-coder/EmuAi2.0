@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emu AI</title>
+    <!-- Marked.js for rendering markdown -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap');
+
+        :root {
+            --bg-color: #131314;
+            --sidebar-color: #1e1f20;
+            --input-bg: #1e1f20;
+            --text-primary: #e3e3e3;
+            --text-secondary: #c4c7c5;
+            --accent-blue: #a8c7fa;
+            --user-msg-bg: #282a2c;
+            --font-family: 'Google Sans', system-ui, -apple-system, sans-serif;
+            --border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            display: flex;
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            transition: background-image 0.5s ease;
+        }
+
+        /* Sidebar styling */
+        .sidebar {
+            width: 280px;
+            background-color: var(--sidebar-color);
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            box-sizing: border-box;
+            border-right: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        .new-chat-btn {
+            background-color: #282a2c;
+            color: var(--text-secondary);
+            border: none;
+            padding: 12px 20px;
+            border-radius: 50px;
+            text-align: left;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: background 0.2s;
+            font-family: var(--font-family);
+            font-weight: 500;
+        }
+
+        .new-chat-btn:hover { background-color: #333537; color: var(--text-primary); }
+        .spacer { flex-grow: 1; }
+
+        .settings-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 12px;
+            text-align: left;
+            border-radius: 10px;
+            transition: background 0.2s;
+            font-family: var(--font-family);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .settings-btn:hover { background-color: rgba(255,255,255,0.08); }
+
+        /* Main Chat Area */
+        .main-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            background-color: rgba(19, 19, 20, 0.7); 
+            backdrop-filter: blur(8px);
+        }
+
+        .header {
+            width: 100%;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            box-sizing: border-box;
+            font-size: 20px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .chat-container {
+            width: 100%;
+            max-width: 850px;
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            box-sizing: border-box;
+            scroll-behavior: smooth;
+        }
+
+        /* Greeting Area */
+        .greeting {
+            margin-top: 10vh;
+            text-align: left;
+            padding: 0 20px;
+        }
+        .greeting h1 {
+            font-size: 56px;
+            margin: 0;
+            background: -webkit-linear-gradient(74deg, #4285f4 0, #9b72cb 9%, #d96570 20%, #d96570 24%, #9b72cb 35%, #4285f4 44%, #9b72cb 50%, #d96570 56%, #131314 75%, #131314 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 500;
+            letter-spacing: -1px;
+        }
+        .greeting p {
+            font-size: 56px;
+            margin: 0;
+            color: #444746;
+            font-weight: 500;
+            letter-spacing: -1px;
+        }
+
+        /* Messages */
+        .message {
+            display: flex;
+            flex-direction: column;
+            max-width: 100%;
+            line-height: 1.6;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .user-message { align-items: flex-end; }
+        .user-content {
+            background-color: var(--user-msg-bg);
+            padding: 12px 24px;
+            border-radius: 24px;
+            max-width: 80%;
+            white-space: pre-wrap;
+            font-size: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .user-content img {
+            max-width: 300px;
+            border-radius: 12px;
+        }
+
+        .ai-message { 
+            align-items: flex-start; 
+            display: flex;
+            flex-direction: row;
+            gap: 16px;
+        }
+        
+        .ai-avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4285f4, #9b72cb, #d96570);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            margin-top: 5px;
+        }
+
+        .ai-content {
+            padding: 5px 0;
+            max-width: calc(100% - 46px);
+            width: 100%;
+            font-size: 16px;
+        }
+
+        .ai-content img {
+            max-width: 100%;
+            border-radius: 12px;
+            margin: 10px 0;
+        }
+
+        /* Input Area */
+        .input-wrapper {
+            width: 100%;
+            max-width: 850px;
+            padding: 0 20px 20px 20px;
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        .image-preview-container {
+            display: flex;
+            gap: 10px;
+            padding: 10px 20px;
+            overflow-x: auto;
+            position: absolute;
+            bottom: 100%;
+            left: 20px;
+            right: 20px;
+            background: var(--bg-color);
+            border-radius: 16px 16px 0 0;
+            display: none;
+            border: 1px solid var(--border-color);
+            border-bottom: none;
+        }
+
+        .image-preview-item {
+            position: relative;
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            background-color: #333;
+            background-size: cover;
+            background-position: center;
+            flex-shrink: 0;
+        }
+
+        .remove-img-btn {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #444;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .input-box {
+            display: flex;
+            background-color: var(--input-bg);
+            border-radius: 32px;
+            padding: 8px 16px;
+            align-items: flex-end;
+            min-height: 56px;
+            box-sizing: border-box;
+            border: 1px solid transparent;
+            transition: border-color 0.2s;
+        }
+        
+        .input-box:focus-within {
+            border-color: rgba(255,255,255,0.2);
+            background-color: #282a2c;
+        }
+
+        .icon-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 10px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+            height: 40px;
+            width: 40px;
+            flex-shrink: 0;
+        }
+        .icon-btn:hover { background-color: rgba(255,255,255,0.1); color: var(--text-primary); }
+
+        .input-box textarea {
+            flex-grow: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-size: 16px;
+            font-family: var(--font-family);
+            padding: 10px;
+            outline: none;
+            resize: none;
+            max-height: 200px;
+            min-height: 24px;
+            overflow-y: hidden;
+            line-height: 1.5;
+        }
+
+        .send-btn { color: var(--accent-blue); }
+
+        /* Settings Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.6);
+            backdrop-filter: blur(4px);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background-color: var(--sidebar-color);
+            padding: 30px;
+            border-radius: 24px;
+            width: 450px;
+            max-width: 90%;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            border: 1px solid var(--border-color);
+        }
+
+        .modal input {
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            color: white;
+            padding: 14px;
+            border-radius: 12px;
+            outline: none;
+            font-size: 14px;
+            font-family: var(--font-family);
+        }
+        
+        .modal input:focus { border-color: var(--accent-blue); }
+
+        .modal button {
+            background-color: var(--accent-blue);
+            color: #000;
+            border: none;
+            padding: 14px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 15px;
+            margin-top: 10px;
+            font-family: var(--font-family);
+        }
+        
+        .disclaimer {
+            text-align: center; color: var(--text-secondary); font-size: 12px; margin-top: 12px;
+        }
+
+        /* Markdown Styling inside AI messages */
+        .ai-content pre {
+            background-color: #1e1f20;
+            padding: 16px;
+            border-radius: 12px;
+            overflow-x: auto;
+            border: 1px solid var(--border-color);
+        }
+        .ai-content code { font-family: 'Consolas', 'Monaco', monospace; font-size: 14px; }
+        .ai-content p { margin-top: 0; }
+        .ai-content a { color: var(--accent-blue); text-decoration: none; }
+        .ai-content a:hover { text-decoration: underline; }
+        .ai-content table { border-collapse: collapse; width: 100%; margin-bottom: 16px; }
+        .ai-content th, .ai-content td { border: 1px solid var(--border-color); padding: 8px 12px; }
+        
+        .loading-shimmer {
+            height: 20px;
+            width: 60%;
+            background: linear-gradient(90deg, #1e1f20 25%, #282a2c 50%, #1e1f20 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: 4px;
+            margin-top: 5px;
+        }
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <button class="new-chat-btn" onclick="startNewChat()">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+            New chat
+        </button>
+        <div class="spacer"></div>
+        <button class="settings-btn" onclick="toggleModal('flex')">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            Settings
+        </button>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="header">
+            <span>Emu AI</span>
+        </div>
+
+        <div class="chat-container" id="chatContainer">
+            <div class="greeting" id="greetingArea">
+                <h1>Hello, Emu.</h1>
+                <p>How can I help you today?</p>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="input-wrapper">
+            <div class="image-preview-container" id="imagePreviewContainer"></div>
+            
+            <div class="input-box">
+                <input type="file" id="fileInput" accept="image/*" multiple style="display: none;" onchange="handleImageSelection(event)">
+                <button class="icon-btn" onclick="document.getElementById('fileInput').click()" title="Upload image">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                </button>
+                
+                <textarea id="userInput" placeholder="Ask Emu AI anything, or say 'Generate an image of...'" rows="1" oninput="autoResize(this)" onkeydown="handleKeyDown(event)"></textarea>
+                
+                <button class="icon-btn send-btn" onclick="sendMessage()" title="Send">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
+                </button>
+            </div>
+            <div class="disclaimer">
+                Emu AI supports text, code, image uploads, and image generation. Ensure your OpenRouter model supports these features.
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal" id="settingsModal">
+        <div class="modal-content">
+            <h2 style="margin-top: 0; margin-bottom: 5px;">Emu Settings</h2>
+            
+            <label style="font-size: 14px; color: var(--text-secondary);">OpenRouter API Key:</label>
+            <input type="password" id="apiKeyInput" placeholder="sk-or-v1-...">
+            
+            <label style="font-size: 14px; color: var(--text-secondary);">Model Name (Ensure it supports Vision/Tools):</label>
+            <input type="text" id="modelInput" placeholder="e.g., google/gemini-pro" value="google/gemini-flash-1.5">
+            
+            <label style="font-size: 14px; color: var(--text-secondary);">Background Image URL (Optional):</label>
+            <input type="text" id="bgInput" placeholder="https://example.com/image.jpg">
+            
+            <button onclick="saveSettings()">Save & Start</button>
+        </div>
+    </div>
+
+    <script>
+        // --- State Management ---
+        let chatHistory = [];
+        let pendingImages = []; 
+        let openRouterKey = localStorage.getItem('emu_api_key') || '';
+        let currentModel = localStorage.getItem('emu_model') || 'google/gemini-flash-1.5';
+        let bgUrl = localStorage.getItem('emu_bg') || '';
+
+        // --- Initialization ---
+        window.onload = () => {
+            document.getElementById('apiKeyInput').value = openRouterKey;
+            document.getElementById('modelInput').value = currentModel;
+            document.getElementById('bgInput').value = bgUrl;
+            applyBackground(bgUrl);
+            
+            if (!openRouterKey) {
+                toggleModal('flex');
+            }
+        };
+
+        function toggleModal(displayState) {
+            document.getElementById('settingsModal').style.display = displayState;
+        }
+
+        function saveSettings() {
+            openRouterKey = document.getElementById('apiKeyInput').value;
+            currentModel = document.getElementById('modelInput').value;
+            bgUrl = document.getElementById('bgInput').value;
+            
+            localStorage.setItem('emu_api_key', openRouterKey);
+            localStorage.setItem('emu_model', currentModel);
+            localStorage.setItem('emu_bg', bgUrl);
+            
+            applyBackground(bgUrl);
+            toggleModal('none');
+        }
+
+        function applyBackground(url) {
+            if (url) {
+                document.body.style.backgroundImage = `url('${url}')`;
+            } else {
+                document.body.style.backgroundImage = 'none';
+            }
+        }
+
+        function startNewChat() {
+            chatHistory = [];
+            pendingImages = [];
+            renderPendingImages();
+            const inputEl = document.getElementById('userInput');
+            inputEl.value = '';
+            inputEl.style.height = 'auto';
+            const chatContainer = document.getElementById('chatContainer');
+            chatContainer.innerHTML = `
+                <div class="greeting" id="greetingArea">
+                    <h1>Hello, Emu.</h1>
+                    <p>How can I help you today?</p>
+                </div>
+            `;
+        }
+
+        // --- UI Interactions ---
+        function autoResize(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = textarea.scrollHeight + 'px';
+            if (textarea.value === '') textarea.style.height = 'auto';
+        }
+
+        function handleKeyDown(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        }
+
+        // --- Image Handling ---
+        function handleImageSelection(event) {
+            const files = event.target.files;
+            if (files.length === 0) return;
+
+            Array.from(files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    pendingImages.push(e.target.result);
+                    renderPendingImages();
+                };
+                reader.readAsDataURL(file);
+            });
+            event.target.value = ''; 
+        }
+
+        function removePendingImage(index) {
+            pendingImages.splice(index, 1);
+            renderPendingImages();
+        }
+
+        function renderPendingImages() {
+            const container = document.getElementById('imagePreviewContainer');
+            if (pendingImages.length > 0) {
+                container.style.display = 'flex';
+                container.innerHTML = pendingImages.map((img, idx) => `
+                    <div class="image-preview-item" style="background-image: url('${img}')">
+                        <button class="remove-img-btn" onclick="removePendingImage(${idx})">✕</button>
+                    </div>
+                `).join('');
+            } else {
+                container.style.display = 'none';
+                container.innerHTML = '';
+            }
+        }
+
+        // --- Chat Logic ---
+        async function sendMessage() {
+            const inputEl = document.getElementById('userInput');
+            const text = inputEl.value.trim();
+            
+            if (!text && pendingImages.length === 0) return;
+            if (!openRouterKey) {
+                alert("Please add your OpenRouter API Key in Settings first.");
+                toggleModal('flex');
+                return;
+            }
+
+            const greeting = document.getElementById('greetingArea');
+            if (greeting) greeting.style.display = 'none';
+
+            // 1. Display User Message
+            const userDisplayData = { text: text, images: [...pendingImages] };
+            appendMessage('user', userDisplayData);
+
+            // 2. Format payload for OpenRouter (Text + Base64 Images)
+            let apiContent;
+            if (pendingImages.length > 0) {
+                apiContent = [];
+                if (text) {
+                    apiContent.push({ type: "text", text: text });
+                } else {
+                    apiContent.push({ type: "text", text: "Describe this image."});
+                }
+                pendingImages.forEach(imgData => {
+                    apiContent.push({ type: "image_url", image_url: { url: imgData } });
+                });
+            } else {
+                apiContent = text;
+            }
+
+            chatHistory.push({ role: "user", content: apiContent });
+
+            // Clear Input
+            inputEl.value = '';
+            inputEl.style.height = 'auto';
+            pendingImages = [];
+            renderPendingImages();
+
+            // 3. Show Loading State
+            const chatContainer = document.getElementById('chatContainer');
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'message ai-message';
+            loadingDiv.innerHTML = `
+                <div class="ai-avatar">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z"/></svg>
+                </div>
+                <div class="ai-content"><div class="loading-shimmer"></div></div>
+            `;
+            chatContainer.appendChild(loadingDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+
+            try {
+                // 4. API Call
+                const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${openRouterKey}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        model: currentModel,
+                        messages: chatHistory,
+                        // This tool enables OpenRouter to natively generate images for you!
+                        tools: [{ type: "openrouter:image_generation" }] 
+                    })
+                });
+
+                const data = await response.json();
+                if (data.error) throw new Error(data.error.message);
+
+                const aiText = data.choices[0].message.content;
+                
+                chatContainer.removeChild(loadingDiv);
+                
+                // 5. Display AI Message
+                appendMessage('ai', { text: aiText });
+                chatHistory.push({ role: "assistant", content: aiText });
+
+            } catch (error) {
+                chatContainer.removeChild(loadingDiv);
+                appendMessage('ai', { text: `**Error:** ${error.message}` });
+            }
+        }
+
+        // --- Render Messages ---
+        function appendMessage(role, data) {
+            const chatContainer = document.getElementById('chatContainer');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message ${role}-message`;
+            
+            if (role === 'ai') {
+                const avatar = document.createElement('div');
+                avatar.className = 'ai-avatar';
+                avatar.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z"/></svg>`;
+                msgDiv.appendChild(avatar);
+            }
+
+            const contentDiv = document.createElement('div');
+            contentDiv.className = `${role}-content`;
+            
+            if (role === 'user') {
+                if (data.images && data.images.length > 0) {
+                    data.images.forEach(img => {
+                        const imgEl = document.createElement('img');
+                        imgEl.src = img;
+                        contentDiv.appendChild(imgEl);
+                    });
+                }
+                if (data.text) {
+                    const textSpan = document.createElement('span');
+                    textSpan.textContent = data.text;
+                    contentDiv.appendChild(textSpan);
+                }
+            } else {
+                // Parse AI markdown text into beautiful HTML
+                contentDiv.innerHTML = marked.parse(data.text || '');
+            }
+
+            msgDiv.appendChild(contentDiv);
+            chatContainer.appendChild(msgDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+    </script>
+</body>
+</html>
