@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emu AI</title>
+    <!-- Marked.js for rendering markdown like Gemini does -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #131314;
+            --sidebar-color: #1e1f20;
+            --input-bg: #1e1f20;
+            --text-primary: #e3e3e3;
+            --text-secondary: #c4c7c5;
+            --accent-blue: #a8c7fa;
+            --user-msg-bg: #282a2c;
+            --font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            display: flex;
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            transition: background-image 0.5s ease;
+        }
+
+        /* Sidebar styling */
+        .sidebar {
+            width: 260px;
+            background-color: rgba(30, 31, 32, 0.85);
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            box-sizing: border-box;
+            border-right: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .new-chat-btn {
+            background-color: transparent;
+            color: var(--text-secondary);
+            border: none;
+            padding: 12px 16px;
+            border-radius: 20px;
+            text-align: left;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.2s;
+        }
+
+        .new-chat-btn:hover { background-color: rgba(255,255,255,0.08); }
+        .spacer { flex-grow: 1; }
+
+        .settings-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 10px;
+            text-align: left;
+            border-radius: 10px;
+            transition: background 0.2s;
+        }
+        .settings-btn:hover { background-color: rgba(255,255,255,0.08); }
+
+        /* Main Chat Area */
+        .main-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            background-color: rgba(19, 19, 20, 0.85);
+            backdrop-filter: blur(5px);
+        }
+
+        .header {
+            width: 100%;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            box-sizing: border-box;
+            font-size: 18px;
+            color: var(--text-secondary);
+        }
+
+        .chat-container {
+            width: 100%;
+            max-width: 800px;
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            box-sizing: border-box;
+        }
+
+        /* Greeting Area */
+        .greeting {
+            margin-top: 10vh;
+            text-align: left;
+            padding: 0 20px;
+        }
+        .greeting h1 {
+            font-size: 56px;
+            margin: 0;
+            background: -webkit-linear-gradient(74deg, #4285f4 0, #9b72cb 9%, #d96570 20%, #d96570 24%, #9b72cb 35%, #4285f4 44%, #9b72cb 50%, #d96570 56%, #131314 75%, #131314 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 500;
+        }
+        .greeting p {
+            font-size: 56px;
+            margin: 0;
+            color: #444746;
+            font-weight: 500;
+        }
+
+        /* Messages */
+        .message {
+            display: flex;
+            flex-direction: column;
+            max-width: 100%;
+            line-height: 1.6;
+        }
+
+        .user-message { align-items: flex-end; }
+        .user-content {
+            background-color: var(--user-msg-bg);
+            padding: 12px 20px;
+            border-radius: 24px;
+            max-width: 80%;
+            white-space: pre-wrap;
+        }
+
+        .ai-message { align-items: flex-start; }
+        .ai-content {
+            padding: 10px 0;
+            max-width: 100%;
+            width: 100%;
+        }
+
+        /* Input Area */
+        .input-container {
+            width: 100%;
+            max-width: 800px;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .input-box {
+            display: flex;
+            background-color: var(--input-bg);
+            border-radius: 32px;
+            padding: 10px 20px;
+            align-items: center;
+        }
+
+        .input-box input {
+            flex-grow: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-size: 16px;
+            padding: 10px;
+            outline: none;
+        }
+
+        .send-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 10px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+        }
+
+        .send-btn:hover { background-color: rgba(255,255,255,0.1); color: var(--text-primary); }
+
+        /* Settings Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.6);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background-color: var(--sidebar-color);
+            padding: 30px;
+            border-radius: 20px;
+            width: 400px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .modal input {
+            background-color: var(--bg-color);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            outline: none;
+        }
+
+        .modal button {
+            background-color: var(--accent-blue);
+            color: black;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        /* Markdown Styling inside AI messages */
+        .ai-content pre {
+            background-color: #1e1f20;
+            padding: 15px;
+            border-radius: 10px;
+            overflow-x: auto;
+        }
+        .ai-content code { font-family: monospace; }
+        
+        .loading {
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <button class="new-chat-btn" onclick="startNewChat()">
+            <span style="font-size: 20px;">+</span> New chat
+        </button>
+        <div class="spacer"></div>
+        <button class="settings-btn" onclick="toggleModal('flex')">⚙️ Settings</button>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="header">
+            <span>Emu AI</span>
+        </div>
+
+        <div class="chat-container" id="chatContainer">
+            <!-- Initial Greeting -->
+            <div class="greeting" id="greetingArea">
+                <h1>Hello, User</h1>
+                <p>How can I help you today?</p>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="input-container">
+            <div class="input-box">
+                <input type="text" id="userInput" placeholder="Enter a prompt here" onkeypress="handleKeyPress(event)">
+                <button class="send-btn" onclick="sendMessage()">➤</button>
+            </div>
+            <div style="text-align: center; color: var(--text-secondary); font-size: 12px; margin-top: 10px;">
+                Emu AI uses OpenRouter. Responses may vary.
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal" id="settingsModal">
+        <div class="modal-content">
+            <h2 style="margin-top: 0;">Emu AI Settings</h2>
+            
+            <label>OpenRouter API Key:</label>
+            <input type="password" id="apiKeyInput" placeholder="sk-or-v1-...">
+            
+            <label>Model Name:</label>
+            <input type="text" id="modelInput" placeholder="e.g., google/gemini-pro" value="google/gemini-flash-1.5">
+            
+            <label>Background Image URL (Optional):</label>
+            <input type="text" id="bgInput" placeholder="https://example.com/image.jpg">
+            
+            <button onclick="saveSettings()">Save & Close</button>
+        </div>
+    </div>
+
+    <script>
+        // State variables
+        let chatHistory = [];
+        let openRouterKey = localStorage.getItem('emu_api_key') || '';
+        let currentModel = localStorage.getItem('emu_model') || 'google/gemini-flash-1.5';
+        let bgUrl = localStorage.getItem('emu_bg') || '';
+
+        // Initialize settings on load
+        window.onload = () => {
+            document.getElementById('apiKeyInput').value = openRouterKey;
+            document.getElementById('modelInput').value = currentModel;
+            document.getElementById('bgInput').value = bgUrl;
+            applyBackground(bgUrl);
+            
+            if (!openRouterKey) {
+                toggleModal('flex'); // Force open settings if no key
+            }
+        };
+
+        function toggleModal(displayState) {
+            document.getElementById('settingsModal').style.display = displayState;
+        }
+
+        function saveSettings() {
+            openRouterKey = document.getElementById('apiKeyInput').value;
+            currentModel = document.getElementById('modelInput').value;
+            bgUrl = document.getElementById('bgInput').value;
+            
+            localStorage.setItem('emu_api_key', openRouterKey);
+            localStorage.setItem('emu_model', currentModel);
+            localStorage.setItem('emu_bg', bgUrl);
+            
+            applyBackground(bgUrl);
+            toggleModal('none');
+        }
+
+        function applyBackground(url) {
+            if (url) {
+                document.body.style.backgroundImage = `url('${url}')`;
+            } else {
+                document.body.style.backgroundImage = 'none';
+            }
+        }
+
+        function startNewChat() {
+            chatHistory = [];
+            const chatContainer = document.getElementById('chatContainer');
+            chatContainer.innerHTML = `
+                <div class="greeting" id="greetingArea">
+                    <h1>Hello, User</h1>
+                    <p>How can I help you today?</p>
+                </div>
+            `;
+        }
+
+        function handleKeyPress(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        async function sendMessage() {
+            const inputEl = document.getElementById('userInput');
+            const text = inputEl.value.trim();
+            if (!text) return;
+            if (!openRouterKey) {
+                alert("Please add your OpenRouter API Key in Settings first.");
+                toggleModal('flex');
+                return;
+            }
+
+            // Hide greeting if it exists
+            const greeting = document.getElementById('greetingArea');
+            if (greeting) greeting.style.display = 'none';
+
+            // Add user message to UI
+            appendMessage('user', text);
+            inputEl.value = '';
+
+            // Add to history
+            chatHistory.push({ role: "user", content: text });
+
+            // Create loading placeholder for AI
+            const chatContainer = document.getElementById('chatContainer');
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'message ai-message';
+            loadingDiv.innerHTML = `<div class="ai-content loading">Emu is thinking...</div>`;
+            chatContainer.appendChild(loadingDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+
+            try {
+                // Call OpenRouter API
+                const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${openRouterKey}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        model: currentModel,
+                        messages: chatHistory
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.error) throw new Error(data.error.message);
+
+                const aiText = data.choices[0].message.content;
+                
+                // Remove loading div
+                chatContainer.removeChild(loadingDiv);
+                
+                // Add AI message to UI (Parsed with marked.js for Markdown)
+                appendMessage('ai', aiText);
+                chatHistory.push({ role: "assistant", content: aiText });
+
+            } catch (error) {
+                chatContainer.removeChild(loadingDiv);
+                appendMessage('ai', `**Error:** ${error.message}`);
+            }
+        }
+
+        function appendMessage(role, text) {
+            const chatContainer = document.getElementById('chatContainer');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message ${role}-message`;
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = `${role}-content`;
+            
+            if (role === 'ai') {
+                // Use marked.js to render markdown (bold, code blocks, etc.)
+                contentDiv.innerHTML = marked.parse(text);
+            } else {
+                contentDiv.textContent = text;
+            }
+
+            msgDiv.appendChild(contentDiv);
+            chatContainer.appendChild(msgDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+    </script>
+</body>
+</html>
